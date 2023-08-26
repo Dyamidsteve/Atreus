@@ -1,16 +1,18 @@
 package data
 
 import (
-	"Atreus/app/relation/service/internal/biz"
 	"context"
 	"fmt"
+	"math/rand"
+	"strconv"
+	"time"
+
+	"Atreus/app/relation/service/internal/biz"
+
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-redis/redis/v8"
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
-	"math/rand"
-	"strconv"
-	"time"
 )
 
 type UserRepo interface {
@@ -49,14 +51,14 @@ func (r *relationRepo) GetFollowList(ctx context.Context, userId uint32) ([]*biz
 	if err != nil {
 		return nil, fmt.Errorf("redis query error %w", err)
 	}
-	fl := make([]uint32, len(follows))
+	fl := make([]uint32, 0, len(follows))
 	if len(follows) > 0 {
-		for i, v := range follows {
+		for _, v := range follows {
 			vc, err := strconv.Atoi(v)
 			if err != nil {
 				return nil, fmt.Errorf("strconv error %w", err)
 			}
-			fl[i] = uint32(vc)
+			fl = append(fl, uint32(vc))
 		}
 	} else {
 		// 如果不存在则创建
@@ -95,14 +97,14 @@ func (r *relationRepo) GetFollowerList(ctx context.Context, userId uint32) (ul [
 	if err != nil {
 		return nil, fmt.Errorf("redis query error %w", err)
 	}
-	fl := make([]uint32, len(followers))
+	fl := make([]uint32, 0, len(followers))
 	if len(followers) > 0 {
-		for i, v := range followers {
+		for _, v := range followers {
 			vc, err := strconv.Atoi(v)
 			if err != nil {
 				return nil, fmt.Errorf("strconv error %w", err)
 			}
-			fl[i] = uint32(vc)
+			fl = append(fl, uint32(vc))
 		}
 	} else {
 		// 如果不存在则创建
@@ -140,7 +142,8 @@ func (r *relationRepo) GetFollowerList(ctx context.Context, userId uint32) (ul [
 	return users, nil
 }
 
-func (r *relationRepo) Follow(ctx context.Context, userId uint32, toUserId uint32) error {
+func (r *relationRepo) Follow(ctx context.Context, toUserId uint32) error {
+	userId := ctx.Value("user_id").(uint32)
 	if userId == toUserId {
 		return fmt.Errorf("can't follow yourself")
 	}
@@ -222,7 +225,8 @@ func (r *relationRepo) Follow(ctx context.Context, userId uint32, toUserId uint3
 	return nil
 }
 
-func (r *relationRepo) UnFollow(ctx context.Context, userId uint32, toUserId uint32) error {
+func (r *relationRepo) UnFollow(ctx context.Context, toUserId uint32) error {
+	userId := ctx.Value("user_id").(uint32)
 	err := r.DelFollow(ctx, userId, toUserId)
 	if err != nil {
 		return err
@@ -312,8 +316,8 @@ func (r *relationRepo) GetFlrList(ctx context.Context, userId uint32) ([]uint32,
 		return nil, nil
 	}
 	userIDs := make([]uint32, 0, len(followers))
-	for i, follower := range followers {
-		userIDs[i] = follower.FollowerId
+	for _, follower := range followers {
+		userIDs = append(userIDs, follower.FollowerId)
 	}
 	return userIDs, nil
 }
@@ -332,7 +336,7 @@ func (r *relationRepo) AddFollow(ctx context.Context, userId uint32, toUserId ui
 			UserId:     toUserId,
 			FollowerId: userId,
 		}
-		err = tx.WithContext(ctx).Create(&follow).Error
+		err = tx.Create(&follow).Error
 		if err != nil {
 			return fmt.Errorf("failed to create relation: %w", err)
 		}
@@ -359,7 +363,7 @@ func (r *relationRepo) DelFollow(ctx context.Context, userId uint32, toUserId ui
 		if relation == nil {
 			return nil
 		}
-		err = tx.WithContext(ctx).Where(
+		err = tx.Where(
 			"user_id = ? AND follower_id = ?", toUserId, userId).Delete(&relation[0]).Error
 		if err != nil {
 			return err
@@ -380,7 +384,7 @@ func (r *relationRepo) DelFollow(ctx context.Context, userId uint32, toUserId ui
 // SearchRelation 查询关注关系
 func (r *relationRepo) SearchRelation(ctx context.Context, userId uint32, toUserId []uint32) ([]bool, error) {
 	var relation []*Followers
-	var relationMap = make(map[uint32]bool, len(relation))
+	relationMap := make(map[uint32]bool, len(relation))
 	result := r.data.db.WithContext(ctx).Where("user_id IN ? AND follower_id = ?", toUserId, userId).Find(&relation)
 	if result.Error != nil {
 		return nil, result.Error

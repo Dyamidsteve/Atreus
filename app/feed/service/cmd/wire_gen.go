@@ -29,7 +29,7 @@ func wireApp(confServer *conf.Server, client *conf.Client, jwt *conf.JWT, logger
 	feedUsecase := biz.NewFeedUsecase(feedRepo, jwt, logger)
 	feedService := service.NewFeedService(feedUsecase, logger)
 	grpcServer := server.NewGRPCServer(confServer, feedService, logger)
-	httpServer := server.NewHTTPServer(confServer, feedService, logger)
+	httpServer := server.NewHTTPServer(confServer, jwt, feedService, logger)
 	app := newApp(logger, grpcServer, httpServer)
 	return app, func() {
 	}, nil

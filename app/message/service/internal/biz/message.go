@@ -2,48 +2,52 @@ package biz
 
 import (
 	"context"
+	"errors"
+
+	"Atreus/app/message/service/internal/conf"
 
 	"github.com/go-kratos/kratos/v2/log"
 )
 
-// Message is a Message model.
 type Message struct {
+	UId        uint64
+	ToUserId   uint32
+	FromUserId uint32
+	Content    string
+	CreateTime int64
 }
 
-// MessageRepo is a Greater repo.
 type MessageRepo interface {
-	// params: token,toUserId,msgTime
-	GetMessageList(context.Context, string, int64, int64) ([]*Message, error)
-
-	// params: token,toUserId,actionType,content
-	PublishMessage(context.Context, string, int64, int32, string) error
+	GetMessageList(context.Context, uint32, int64) ([]*Message, error)
+	PublishMessage(context.Context, uint32, string) error
+	InitStoreMessageQueue()
 }
 
-// MessageUsecase is a Message usecase.
 type MessageUsecase struct {
 	repo MessageRepo
+	conf *conf.JWT
 	log  *log.Helper
 }
 
-// NewMessageUsecase new a Message usecase.
-func NewMessageUsecase(repo MessageRepo, logger log.Logger) *MessageUsecase {
-	return &MessageUsecase{repo: repo, log: log.NewHelper(logger)}
+func NewMessageUsecase(repo MessageRepo, conf *conf.JWT, logger log.Logger) *MessageUsecase {
+	go repo.InitStoreMessageQueue()
+	return &MessageUsecase{
+		repo: repo, conf: conf,
+		log: log.NewHelper(log.With(logger, "model", "usecase/message")),
+	}
 }
 
-// GetMessageList return a list of messages beginning on the given preMsgTime from RabbitMQ
-func (uc *MessageUsecase) GetMessageList(ctx context.Context, token string, toUserId int64, preMsgTime int64) ([]*Message, error) {
-	// firstly auth token
-
-	// pull the message
-
-	return nil, nil
+func (uc *MessageUsecase) GetMessageList(
+	ctx context.Context, toUserId uint32, preMsgTime int64,
+) ([]*Message, error) {
+	return uc.repo.GetMessageList(ctx, toUserId, preMsgTime)
 }
 
-// PublishMessage push a message
-func (uc *MessageUsecase) PublishMessage(ctx context.Context, token string, toUSerId int64, actionType int32, content string) error {
-	// firstly auto token
-
-	// push the message
-
-	return nil
+func (uc *MessageUsecase) PublishMessage(ctx context.Context, toUserId uint32, actionType uint32, content string) error {
+	switch actionType {
+	case 1:
+		return uc.repo.PublishMessage(ctx, toUserId, content)
+	default:
+		return errors.New("the actionType value for the error is provided")
+	}
 }

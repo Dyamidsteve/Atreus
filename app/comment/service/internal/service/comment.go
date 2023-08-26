@@ -1,9 +1,11 @@
 package service
 
 import (
+	"context"
+
 	pb "Atreus/api/comment/service/v1"
 	"Atreus/app/comment/service/internal/biz"
-	"context"
+
 	"github.com/go-kratos/kratos/v2/log"
 )
 
@@ -22,7 +24,7 @@ func NewCommentService(cu *biz.CommentUsecase, logger log.Logger) *CommentServic
 
 func (s *CommentService) GetCommentList(ctx context.Context, req *pb.CommentListRequest) (*pb.CommentListReply, error) {
 	reply := &pb.CommentListReply{StatusCode: 0, StatusMsg: "Success", CommentList: make([]*pb.Comment, 0)}
-	commentList, err := s.cu.GetCommentList(ctx, req.Token, req.VideoId)
+	commentList, err := s.cu.GetCommentList(ctx, req.VideoId)
 	if err != nil {
 		reply.StatusCode = -1
 		reply.StatusMsg = err.Error()
@@ -53,7 +55,7 @@ func (s *CommentService) GetCommentList(ctx context.Context, req *pb.CommentList
 
 func (s *CommentService) CommentAction(ctx context.Context, req *pb.CommentActionRequest) (*pb.CommentActionReply, error) {
 	reply := &pb.CommentActionReply{StatusCode: 0, StatusMsg: "Success"}
-	comment, err := s.cu.CommentAction(ctx, req.VideoId, req.CommentId, req.ActionType, req.CommentText, req.Token)
+	comment, err := s.cu.CommentAction(ctx, req.VideoId, req.CommentId, req.ActionType, req.CommentText)
 	if err != nil {
 		reply.StatusCode = -1
 		reply.StatusMsg = err.Error()

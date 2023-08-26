@@ -1,9 +1,10 @@
 package service
 
 import (
+	"context"
+
 	pb "Atreus/api/message/service/v1"
 	"Atreus/app/message/service/internal/biz"
-	"context"
 
 	"github.com/go-kratos/kratos/v2/log"
 )
@@ -22,8 +23,37 @@ func NewMessageService(mu *biz.MessageUsecase, logger log.Logger) *MessageServic
 }
 
 func (s *MessageService) GetMessageList(ctx context.Context, req *pb.MessageListRequest) (*pb.MessageListReply, error) {
-	return &pb.MessageListReply{}, nil
+	message, err := s.mu.GetMessageList(ctx, req.ToUserId, req.PreMsgTime)
+	if err != nil {
+		return &pb.MessageListReply{
+			StatusCode: -1,
+			StatusMsg:  err.Error(),
+		}, nil
+	}
+	ml := make([]*pb.Message, 0, len(message))
+	for _, m := range message {
+		ml = append(ml, &pb.Message{
+			Id:         m.UId,
+			ToUserId:   m.ToUserId,
+			FromUserId: m.FromUserId,
+			Content:    m.Content,
+			CreateTime: m.CreateTime,
+		})
+	}
+	return &pb.MessageListReply{
+		StatusCode:  0,
+		StatusMsg:   "success",
+		MessageList: ml,
+	}, nil
 }
+
 func (s *MessageService) MessageAction(ctx context.Context, req *pb.MessageActionRequest) (*pb.MessageActionReply, error) {
-	return &pb.MessageActionReply{}, nil
+	reply := &pb.MessageActionReply{StatusCode: 0, StatusMsg: "success"}
+	err := s.mu.PublishMessage(ctx, req.ToUserId, req.ActionType, req.Content)
+	if err != nil {
+		reply.StatusCode = -1
+		reply.StatusMsg = err.Error()
+		return reply, nil
+	}
+	return reply, nil
 }

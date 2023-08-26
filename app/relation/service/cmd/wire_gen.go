@@ -31,7 +31,7 @@ func wireApp(confServer *conf.Server, client *conf.Client, jwt *conf.JWT, confDa
 	relationUsecase := biz.NewRelationUsecase(relationRepo, jwt, logger)
 	relationService := service.NewRelationService(relationUsecase, logger)
 	grpcServer := server.NewGRPCServer(confServer, relationService, logger)
-	httpServer := server.NewHTTPServer(confServer, relationService, logger)
+	httpServer := server.NewHTTPServer(confServer, jwt, relationService, logger)
 	app := newApp(logger, grpcServer, httpServer)
 	return app, func() {
 		cleanup()

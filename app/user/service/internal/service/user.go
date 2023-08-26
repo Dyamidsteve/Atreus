@@ -1,8 +1,10 @@
 package service
 
 import (
-	"Atreus/app/user/service/internal/biz"
 	"context"
+
+	"Atreus/app/user/service/internal/biz"
+
 	"github.com/go-kratos/kratos/v2/log"
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -54,7 +56,7 @@ func (s *UserService) UserLogin(ctx context.Context, req *pb.UserLoginRequest) (
 }
 
 func (s *UserService) GetUserInfo(ctx context.Context, req *pb.UserInfoRequest) (*pb.UserInfoReply, error) {
-	user, err := s.uc.GetInfo(ctx, req.UserId, req.Token)
+	user, err := s.uc.GetInfo(ctx, req.UserId)
 	if err != nil {
 		return &pb.UserInfoReply{
 			StatusCode: 300,
